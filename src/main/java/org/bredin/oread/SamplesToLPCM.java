@@ -3,9 +3,9 @@ package org.bredin.oread;
 import io.reactivex.Flowable;
 
 public class SamplesToLPCM {
-	public static Flowable<LPCMPacket> samplesToLPCM(Flowable<SamplePacket> src) {
-		final double SIGNAL_NORM = (1 << (LPCMPacket.BITS_PER_SAMPLE - 1)) - 1 ; // 2^15 - 1
+	static final double SIGNAL_NORM = (1 << (LPCMPacket.BITS_PER_SAMPLE - 1)) - 1 ; // 2^15 - 1
 
+	public static Flowable<LPCMPacket> samplesToLPCM(Flowable<SamplePacket> src) {
 		// If we knew all sample groups were of same size, we could pull some multiplication out.
 		return src.map(sample -> {
 			double[] samples = sample.getData();

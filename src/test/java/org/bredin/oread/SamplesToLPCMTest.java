@@ -9,6 +9,26 @@ import static org.junit.Assert.*;
 
 public class SamplesToLPCMTest {
 	@Test
+	public void decodeEncodingTest() {
+		double[] data = new double[(int)(LPCMPacket.SAMPLE_RATE * 1e-3)];
+		data[0] = 0;
+		data[1] = 0.5;
+		data[2] = 0.75;
+		data[3] = 1.0;
+		data[4] = -0.5;
+		data[5] = -0.75;
+		data[6] = -1.0;
+		SamplePacket sample = new SamplePacket(1, 2, data);
+		Flowable<LPCMPacket> lpcm = SamplesToLPCM.samplesToLPCM(Flowable.just(sample));
+		Flowable<SamplePacket> samples = LPCMToSamples.LPCMToSamples(lpcm);
+		SamplePacket result = samples.blockingFirst();
+
+		for (int i = 0; i < 7; ++i) {
+			assertEquals("Comparing " + i + "th", data[i], result.getData()[i], 1e-2);
+		}
+	}
+
+	@Test
 	public void encodeByteTest() {
 		double[] data = new double[(int)(LPCMPacket.SAMPLE_RATE * 1e-3)];
 		data[0] = 0;
