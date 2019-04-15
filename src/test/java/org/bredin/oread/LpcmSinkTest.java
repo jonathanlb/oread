@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
-public class LPCMSinkTest {
+public class LpcmSinkTest {
 	@Test
 	public void a440Test() throws Exception {
 		final int numTicks = 100;
@@ -13,9 +13,9 @@ public class LPCMSinkTest {
 		final TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 		Flowable<TimePacket> time = TimePacket.clockTime(period, timeUnit);
 		// Flowable<TimePacket> time = TimePacket.logicalTime(period, timeUnit, numTicks);
-		Flowable<SamplePacket> sin = SinSource.sinSrc(time, 0.8, 440);
-		Flowable<LPCMPacket> wav = SamplesToLPCM.samplesToLPCM(sin);
-		LPCMSink sink = new LPCMSink(wav);
+		Flowable<SamplePacket> sin = SinSource.sinSrc(time, 0.8f, 440);
+		Flowable<LpcmPacket> wav = SamplesToLpcm.samplesToLpcm(sin);
+		LpcmSink sink = new LpcmSink(wav);
 		Thread.sleep(timeUnit.toMillis(numTicks * period));
 		sink.close();
 	}

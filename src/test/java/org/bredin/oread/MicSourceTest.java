@@ -11,8 +11,8 @@ public class MicSourceTest {
 	@Test
 	public void openMicTest() throws Exception {
 		Flowable<TimePacket> clock = TimePacket.clockTime(1, TimeUnit.MILLISECONDS);
-		Flowable<LPCMPacket> mic = MicSource.mic(clock);
-		LPCMPacket p = mic.blockingFirst();
+		Flowable<LpcmPacket> mic = MicSource.mic(clock);
+		LpcmPacket p = mic.blockingFirst();
 		assertTrue(p.getData().length > 0);
 	}
 }

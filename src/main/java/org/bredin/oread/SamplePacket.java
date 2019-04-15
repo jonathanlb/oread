@@ -4,29 +4,38 @@ package org.bredin.oread;
  * Data package representing a snippet of a sampled signal with values
  * in the range [-1,1].
  */
-public class SamplePacket implements Packet<double[]> {
-	final long start;
-	final long end;
-	final double[] data;
+public class SamplePacket implements Packet<float[]> {
+  final int start;
+  final int end;
+  final float[] data;
+  final int sampleRate;
 
-	public SamplePacket(long start, long end, double[] data) {
-		this.start = start;
-		this.end = end;
-		this.data = data;
-	}
+  /**
+   * Build a new sample without copying the input data.
+   */
+  public SamplePacket(int start, int end, float[] data, int sampleRate) {
+    this.start = start;
+    this.end = end;
+    this.data = data;
+    this.sampleRate = sampleRate;
+  }
 
-	@Override
-	public long getStart() {
-		return start;
-	}
+  public int getSampleRate() {
+    return sampleRate;
+  }
 
-	@Override
-	public long getEnd() {
-		return end;
-	}
+  @Override
+  public int getStartMillis() {
+    return start;
+  }
 
-	@Override
-	public double[] getData() {
-		return data;
-	}
+  @Override
+  public int getEndMillis() {
+    return end;
+  }
+
+  @Override
+  public float[] getData() {
+    return data;
+  }
 }

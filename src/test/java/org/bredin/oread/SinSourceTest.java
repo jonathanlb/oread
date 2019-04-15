@@ -21,9 +21,9 @@ public class SinSourceTest {
 		assertEquals(NUM_TICKS, data.size());
 
 		SamplePacket p = data.getLast();
-		assertEquals(2, p.getStart());
-		assertEquals(3, p.getEnd());
-		assertEquals(LPCMPacket.SAMPLE_RATE / 1000, p.getData().length);
+		assertEquals(2, p.getStartMillis());
+		assertEquals(3, p.getEndMillis());
+		assertEquals(LpcmPacket.SAMPLE_RATE / 1000, p.getData().length);
 
 		disposable.dispose();
 	}
