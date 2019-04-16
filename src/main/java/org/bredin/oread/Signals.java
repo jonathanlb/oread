@@ -55,7 +55,7 @@ public class Signals {
     int n = input.length;
     int sz1 = sz - 1;
     float m = (n - 1) / (float)sz1;
-    log.info("resampling {} to {}", n, sz);
+    log.debug("resampling {} to {}", n, sz);
     for (int i = 1; i < sz1; ++i) {
       final float p = i * m;
       final int a = (int)Math.floor(p);
@@ -81,7 +81,7 @@ public class Signals {
     int n = input.length;
     int sz1 = sz - 1;
     double m = (n - 1) / (double)sz1;
-    log.info("resampling {} to {}", n, sz);
+    log.debug("resampling {} to {}", n, sz);
     for (int i = 1; i < sz1; ++i) {
       final double p = i * m;
       final int a = (int)Math.floor(p);

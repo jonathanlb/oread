@@ -20,7 +20,7 @@ public class SamplesToLpcmTest {
 		data[6] = -1.0f;
 		SamplePacket sample = new SamplePacket(1, 2, data, LpcmPacket.SAMPLE_RATE);
 		Flowable<LpcmPacket> lpcm = SamplesToLpcm.samplesToLpcm(Flowable.just(sample));
-		Flowable<SamplePacket> samples = LpcmToSamples.LpcmToSamples(lpcm);
+		Flowable<SamplePacket> samples = LpcmToSamples.lpcmToSamples(lpcm);
 		SamplePacket result = samples.blockingFirst();
 
 		for (int i = 0; i < 7; ++i) {

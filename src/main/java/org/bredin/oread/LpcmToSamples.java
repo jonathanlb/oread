@@ -8,7 +8,7 @@ public class LpcmToSamples {
   /**
    * Convert LPCM byte signal to floating-point samples.
    */
-  public static Flowable<SamplePacket> LpcmToSamples(Flowable<LpcmPacket> src) {
+  public static Flowable<SamplePacket> lpcmToSamples(Flowable<LpcmPacket> src) {
     return src.map(lpcm -> {
       final byte[] bytes = lpcm.getData();
       final int numSamples = bytes.length >> 1; // XXX hardcode from LpcmPacket
