@@ -3,14 +3,13 @@ package org.bredin.oread.panels;
 import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import org.apache.commons.math3.complex.Complex;
-import org.apache.commons.math3.transform.DftNormalization;
-import org.apache.commons.math3.transform.FastFourierTransformer;
-import org.apache.commons.math3.transform.TransformType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bredin.oread.ComplexPacket;
 import org.bredin.oread.LpcmPacket;
 import org.bredin.oread.SamplePacket;
 import org.bredin.oread.Signals;
+// import org.knowm.xchart.internal.chartpart.components.ChartLine;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.style.markers.SeriesMarkers;
@@ -25,10 +24,23 @@ public class SpectrometerPanel extends XYChart {
   private Disposable disposable;
   private final Flowable<SamplePacket> input;
 
-  private final FastFourierTransformer fft;
   private double maxIntensity = 0.0;
   private static final double INTENSITY_DECAY = 0.999;
 
+  // private List<ChartLine> referenceFreqs;
+
+  public static final double C3 = 130.8128;
+  public static final double G3 = 195.9977;
+  public static final double D4 = 293.6648;
+  public static final double A4 = 440.000;
+  public static final double E5 = 659.2551;
+
+  public static final double[] VIOLA_NOTES = { C3, G3, D4, A4 };
+  public static final double[] VIOLIN_NOTES = { G3, D4, A4, E5 };
+
+  /**
+   * Create the panel to listen to the input with the specified dimensions.
+   */
   public SpectrometerPanel(Flowable<SamplePacket> input, int width, int height) {
     super(width, height);
 
@@ -40,16 +52,28 @@ public class SpectrometerPanel extends XYChart {
     XYSeries series = addSeries(INPUT_SERIES, fs, as);
     series.setMarker(SeriesMarkers.NONE);
 
-    fft = new FastFourierTransformer(DftNormalization.STANDARD);
     this.input = input;
   }
 
+  /**
+   * Create the panel to listen to the input with the default dimensions.
+   */
   public SpectrometerPanel(Flowable<SamplePacket> input) {
     this(input, WIDTH, HEIGHT);
   }
 
-  public void addTunerHairlines() {
+  public void addTunerHairlines(double[] freqs) {
     // TODO
+    /*
+    BasicStroke stroke = new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL,
+      10.0f, new float[] { 3.0f, 0.0f }, 0.0f);
+    for (int i = 0; i < freqs.length; ++i) {
+      ChartLine xLine = new ChartLine(freqs[i], true, false);
+      xLine.setColor(Color.MAGENTA);
+      xLine.setStroke(stroke);
+      xLine.init(this);
+    }
+    */
   }
 
   /** Return the index of the most intense frequency. */
@@ -80,11 +104,16 @@ public class SpectrometerPanel extends XYChart {
     getStyler().setYAxisMax(maxIntensity);
   }
 
+  /**
+   * Begin processing the input.
+   * @return Return a hook to stop processing.
+   */
   public synchronized Disposable start() {
     if (disposable != null) {
       stop();
     }
-    disposable = input.subscribe(this::updateChart);
+    disposable = Signals.fft(input)
+                   .subscribe(this::updateChart);
     return disposable;
   }
 
@@ -93,19 +122,15 @@ public class SpectrometerPanel extends XYChart {
     disposable = null;
   }
 
-  private void updateChart(SamplePacket s) {
-    float[] input = s.getData();
-    double[] data = Signals.resampleToDouble(
-      input, Signals.prevPowerOf2(input.length));
-
-    Complex[] f = fft.transform(data, TransformType.FORWARD);
-    int n = f.length >> 1; // display only half the frequencies (avoid sym dups)
+  private void updateChart(ComplexPacket packet) {
+    Complex[] fft = packet.getData();
+    int n = fft.length >> 1; // display only half the frequencies (avoid sym dups)
     double[] fs = new double[n];
     double[] as = new double[n];
-    double df = LpcmPacket.SAMPLE_RATE / f.length;
+    double df = LpcmPacket.SAMPLE_RATE / fft.length;
     for (int i = 0; i < n; ++i) {
-      as[i] = f[i].abs();
-      fs[i] = df * i;
+      as[i] = fft[i].abs();
+      fs[i] = df * (i + 1);
     }
 
     updateXYSeries(INPUT_SERIES, fs, as, null);

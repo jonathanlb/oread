@@ -2,7 +2,10 @@ package org.bredin.oread;
 
 import io.reactivex.Flowable;
 
-public class SinSource {
+public class MathSources {
+  // TODO: square wave
+  // TODO: triangle wave
+  // TODO: sawtooth wave
 
   /** Create a sine signal. */
   public static Flowable<SamplePacket> sinSrc(Flowable<TimePacket> timeSrc, float freq) {

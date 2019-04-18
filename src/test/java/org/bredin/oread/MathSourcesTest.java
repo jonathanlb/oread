@@ -9,13 +9,13 @@ import org.junit.Test;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
-public class SinSourceTest {
+public class MathSourcesTest {
 	@Test
 	public void a440Test() {
 		final int NUM_TICKS = 3;
 		LinkedList<SamplePacket> data = new LinkedList<>();
 		Flowable<TimePacket> time = TimePacket.logicalTime(1, TimeUnit.MILLISECONDS, NUM_TICKS);
-		Flowable<SamplePacket> sin = SinSource.sinSrc(time, 440);
+		Flowable<SamplePacket> sin = MathSources.sinSrc(time, 440);
 		Disposable disposable = sin.subscribe(data::add);
 
 		assertEquals(NUM_TICKS, data.size());

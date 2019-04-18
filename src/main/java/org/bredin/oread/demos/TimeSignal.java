@@ -4,9 +4,10 @@ import io.reactivex.Flowable;
 import io.reactivex.disposables.Disposable;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
+
 import org.bredin.oread.LpcmPacket;
+import org.bredin.oread.MathSources;
 import org.bredin.oread.SamplePacket;
-import org.bredin.oread.SinSource;
 import org.bredin.oread.TimePacket;
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;
@@ -51,7 +52,7 @@ public class TimeSignal {
     TimeSignal ts = new TimeSignal();
 
     Flowable<TimePacket> time = TimePacket.logicalTime(10, TimeUnit.MILLISECONDS, 2);
-    Flowable<SamplePacket> sin = SinSource.sinSrc(time, 330);
+    Flowable<SamplePacket> sin = MathSources.sinSrc(time, 330);
     // ts.start(Signals.hannWindow(sin));
     ts.start(sin);
   }

@@ -1,11 +1,21 @@
 package org.bredin.oread;
 
 import static org.junit.Assert.*;
+
+import io.reactivex.Flowable;
+import org.apache.commons.math3.complex.Complex;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.bredin.oread.panels.SpectrometerPanel;
 import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.bredin.oread.Signals.*;
 
 public class SignalsTest {
+  private static Logger log = LogManager.getLogger();
+
 	@Test
 	public void hannWindowTest() {
 		final float EPS = 1e-7f;
@@ -24,6 +34,93 @@ public class SignalsTest {
 		assertEquals(8, nextPowerOf2(5));
 		assertEquals(64, nextPowerOf2(33));
 	}
+
+  /**
+   * Broken: over estimates frequencies
+   */
+	@Test
+  public void fftTest() {
+    Flowable<TimePacket> time = TimePacket.logicalTime(100, TimeUnit.MILLISECONDS, 1);
+    Flowable<SamplePacket> sin = MathSources.sinSrc(time, (float)SpectrometerPanel.C3);
+    Flowable<SamplePacket> hann = Signals.hannWindow(sin);
+    Flowable<ComplexPacket> fs = Signals.fft(hann);
+
+    double maxIntensity = 0.0;
+    int maxIdx = -1;
+    Complex[] f = fs.blockingFirst().getData();
+    for (int i = 0; i < (f.length >> 1); ++i) {
+      final double intensity = f[i].abs();
+      if (intensity >= maxIntensity) {
+        maxIntensity = intensity;
+        maxIdx = i;
+      }
+    }
+
+    final double EPS = 0.5 * LpcmPacket.SAMPLE_RATE / f.length;
+    double freq = (maxIdx + 1) * LpcmPacket.SAMPLE_RATE / f.length;
+    log.info("fft test: max f: {} idx: {} delta: {}", freq, maxIdx, EPS);
+    assertEquals(SpectrometerPanel.C3, freq, EPS);
+  }
+
+  @Test
+  public void ifftTest() {
+	  int nFreqs = 1024;
+	  int peakIdx = 10;
+	  Complex[] data = new Complex[nFreqs];
+	  for (int i = 0; i < data.length; ++i) {
+	    data[i] = Complex.ZERO;
+    }
+    data[peakIdx] = Complex.ONE.multiply(1000);
+    data[nFreqs - peakIdx - 1] = data[peakIdx];
+
+    ComplexPacket spectrum = new ComplexPacket(1, 100, data);
+    Flowable<SamplePacket> signal = Signals.ifft(Flowable.just(spectrum));
+    ComplexPacket spectrum0 = Signals.fft(signal).blockingFirst();
+    Complex[] data0 = spectrum0.getData();
+
+    int maxIdx = -1;
+    double maxIntensity = 0.0;
+    for (int i = 0; i < nFreqs >> 1; ++i) {
+      final double intensity = data0[i].abs();
+      if (intensity >= maxIntensity) {
+        maxIdx = i;
+        maxIntensity = intensity;
+      }
+    }
+
+    double inputFrequency = (peakIdx + 1.0) * 0.1 / nFreqs;
+    double recoveredFrequency = (maxIdx + 1.0) * 0.1 / data0.length;
+    double EPS = 0.1 * Math.max(1.0 / nFreqs, 1.0 / data0.length);
+    assertEquals(inputFrequency, recoveredFrequency, EPS);
+  }
+
+  /**
+   * Error increases as we diminish frequencies to be halved.
+   * A4 down is within 1Hz. D3 down is within 1.3Hz which is greater than available accuracy.
+   */
+	@Test
+  public void octaveDownTest() {
+    Flowable<TimePacket> time = TimePacket.logicalTime(100, TimeUnit.MILLISECONDS, 1);
+    Flowable<SamplePacket> sin = MathSources.sinSrc(time, (float)SpectrometerPanel.A4);
+    Flowable<SamplePacket> octaveSin = Signals.octaveDown(sin);
+    Complex[] fs = Signals.fft(octaveSin)
+      .blockingFirst().getData();
+
+    int maxIdx = -1;
+    double maxIntensity = 0.0;
+    for (int i = 0; i < fs.length >> 1; ++i) {
+      final double intensity = fs[i].abs();
+      if (intensity >= maxIntensity) {
+        maxIdx = i;
+        maxIntensity = intensity;
+      }
+    }
+
+    final double EPS = LpcmPacket.SAMPLE_RATE / fs.length;
+    double freq = (maxIdx + 1) * LpcmPacket.SAMPLE_RATE / fs.length;
+    log.info("octave test: max f: {} idx: {} delta: {}", freq, maxIdx, EPS);
+    assertEquals(0.5 * SpectrometerPanel.A4, freq, EPS);
+  }
 
 	@Test
 	public void prevPowerOfTwoTest() {

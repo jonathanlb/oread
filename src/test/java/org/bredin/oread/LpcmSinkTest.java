@@ -13,7 +13,7 @@ public class LpcmSinkTest {
 		final TimeUnit timeUnit = TimeUnit.MILLISECONDS;
 		Flowable<TimePacket> time = TimePacket.clockTime(period, timeUnit);
 		// Flowable<TimePacket> time = TimePacket.logicalTime(period, timeUnit, numTicks);
-		Flowable<SamplePacket> sin = SinSource.sinSrc(time, 0.8f, 440);
+		Flowable<SamplePacket> sin = MathSources.sinSrc(time, 0.8f, 440);
 		Flowable<LpcmPacket> wav = SamplesToLpcm.samplesToLpcm(sin);
 		LpcmSink sink = new LpcmSink(wav);
 		Thread.sleep(timeUnit.toMillis(numTicks * period));
