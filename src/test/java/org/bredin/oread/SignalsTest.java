@@ -1,5 +1,6 @@
 package org.bredin.oread;
 
+import static org.apache.commons.math3.util.MathUtils.TWO_PI;
 import static org.junit.Assert.*;
 
 import io.reactivex.Flowable;
@@ -15,6 +16,55 @@ import static org.bredin.oread.Signals.*;
 
 public class SignalsTest {
   private static Logger log = LogManager.getLogger();
+
+  @Test
+  public void complexToPolarTest() {
+    final double EPS = 1e-7;
+    Complex x = new Complex(17, 0);
+    PolarCoordinate y = Signals.complexToPolar(x);
+    assertEquals(17, y.radius, EPS);
+    assertEquals(0, y.angle, EPS);
+
+    x = new Complex(-0.11, 0);
+    y = Signals.complexToPolar(x);
+    assertEquals(0.11, y.radius, EPS);
+    assertEquals(Math.PI, y.angle, EPS);
+
+    x = new Complex(0.0, 4);
+    y = Signals.complexToPolar(x);
+    assertEquals(4, y.radius, EPS);
+    assertEquals(0.5 * Math.PI, y.angle, EPS);
+
+    x = new Complex(0.0, -0.15);
+    y = Signals.complexToPolar(x);
+    assertEquals(0.15, y.radius, EPS);
+    assertEquals(-0.5 * Math.PI, y.angle, EPS);
+
+    x = new Complex(1.0, 1.0);
+    y = Signals.complexToPolar(x);
+    assertEquals(Math.sqrt(2), y.radius, EPS);
+    assertEquals(0.25 * Math.PI, y.angle, EPS);
+
+    x = new Complex(1.0, -1.0);
+    y = Signals.complexToPolar(x);
+    assertEquals(Math.sqrt(2), y.radius, EPS);
+    assertEquals(-0.125 * TWO_PI, y.angle, EPS);
+
+    x = new Complex(-1.0, 1.0);
+    y = Signals.complexToPolar(x);
+    assertEquals(Math.sqrt(2), y.radius, EPS);
+    assertEquals(TWO_PI * 3.0 / 8.0, y.angle, EPS);
+
+    x = new Complex(-1.0, -1.0);
+    y = Signals.complexToPolar(x);
+    assertEquals(Math.sqrt(2), y.radius, EPS);
+    assertEquals(TWO_PI * -3.0 / 8.0, y.angle, EPS);
+
+    x = new Complex(-3.0, 4.0);
+    y = Signals.complexToPolar(x);
+    assertEquals(5, y.radius, EPS);
+    assertEquals(Math.asin(3.0 / 5.0) + 0.5 * Math.PI, y.angle, EPS);
+  }
 
 	@Test
 	public void hannWindowTest() {
@@ -102,7 +152,7 @@ public class SignalsTest {
   public void octaveDownTest() {
     Flowable<TimePacket> time = TimePacket.logicalTime(100, TimeUnit.MILLISECONDS, 1);
     Flowable<SamplePacket> sin = MathSources.sinSrc(time, (float)SpectrometerPanel.A4);
-    Flowable<SamplePacket> octaveSin = Signals.octaveDown(sin);
+    Flowable<SamplePacket> octaveSin = Signals.ifft(Signals.octaveDown(Signals.fft(sin)));
     Complex[] fs = Signals.fft(octaveSin)
       .blockingFirst().getData();
 

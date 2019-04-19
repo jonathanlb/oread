@@ -27,6 +27,10 @@ public class LpcmSink implements AutoCloseable {
   private final BlockingQueue<LpcmPacket> buffer;
   private volatile boolean done = false;
 
+  public static LpcmSink fromSamples(Flowable<SamplePacket> src) throws LineUnavailableException {
+    return new LpcmSink(SamplesToLpcm.samplesToLpcm(src));
+  }
+
   /**
    * Start sending the signal to the default speaker.
    */

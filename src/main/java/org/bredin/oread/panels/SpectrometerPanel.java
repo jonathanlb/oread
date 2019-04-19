@@ -29,12 +29,17 @@ public class SpectrometerPanel extends XYChart {
 
   // private List<ChartLine> referenceFreqs;
 
+  public static final double C2 = 65.4064;
+  public static final double G2 = 97.9989;
   public static final double C3 = 130.8128;
+  public static final double D3 = 146.8324;
   public static final double G3 = 195.9977;
+  public static final double A3 = 220.000;
   public static final double D4 = 293.6648;
   public static final double A4 = 440.000;
   public static final double E5 = 659.2551;
 
+  public static final double[] CELLO_NOTES = { C2, G2, D3, A3 };
   public static final double[] VIOLA_NOTES = { C3, G3, D4, A4 };
   public static final double[] VIOLIN_NOTES = { G3, D4, A4, E5 };
 
