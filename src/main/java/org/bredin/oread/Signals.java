@@ -1,6 +1,8 @@
 package org.bredin.oread;
 
 import io.reactivex.Flowable;
+import java.util.Iterator;
+import java.util.LinkedList;
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.complex.ComplexUtils;
 import org.apache.commons.math3.transform.DftNormalization;
@@ -8,7 +10,6 @@ import org.apache.commons.math3.transform.FastFourierTransformer;
 import org.apache.commons.math3.transform.TransformType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 
 public class Signals {
   private static Logger log = LogManager.getLogger();
@@ -121,8 +122,9 @@ public class Signals {
   /**
    * Transform the input signal an octave down.
    * We need better phase vocoding.  Currently, we just rotate the spectrum components
-   * from Laroche and Dolson, 1999, but the units are unclear.... The current implementation
-   * is the result of blind search and luck.
+   * from Laroche and Dolson, 1999.
+   * The result has discontinuities at the endpoints which we can remove with
+   * overlapping windowing.
    *
    * <p>https://www.ee.columbia.edu/~dpwe/papers/LaroD99-pvoc.pdf
    */
@@ -132,19 +134,17 @@ public class Signals {
       int n = allSpectrum.length;
       Complex[] lowSpectrum = new Complex[n];
       int half = n >> 2;
+      int start = packet.getStartMillis();
+      int duration = packet.getEndMillis() - start;
+      int transformNum2 = 2 * start / duration;
 
       for (int i = 0; i < half; ++i) {
         final Complex a = allSpectrum[i << 1];
         final Complex b = allSpectrum[(i << 1) + 1];
-        // need phase vocoding preserve phase information
-        // oddly sounds best for sine wave
-        // scale up to preserve volume lost in frequency scaling
         lowSpectrum[i] = new Complex(
           a.getReal() + b.getReal(),
           a.getImaginary() + b.getImaginary())
-                           .multiply(ComplexUtils.polar2Complex(2.0, 0.5 * i));
-        // .multiply(ComplexUtils.polar2Complex(2.0, 0.5 * mxi * TWO_PI / n));
-        // .multiply(ComplexUtils.polar2Complex(2.0, 0.5 * i * TWO_PI / n));
+            .multiply(ComplexUtils.polar2Complex(2.0, transformNum2));
         lowSpectrum[n - i - 1] = lowSpectrum[i];
       }
 
@@ -214,5 +214,86 @@ public class Signals {
     }
     result[sz1] = input[n - 1];
     return result;
+  }
+
+  /**
+   * Merge overlapping windows computed from windowOverlap.
+   */
+  public static Flowable<SamplePacket> windowDeoverlap(Flowable<SamplePacket> input, double scale) {
+    SamplePacket first = input.blockingFirst();
+    float[] firstData = first.getData();
+    int headSamples = (int)(firstData.length * scale);
+    int heartSamples = firstData.length - 2 * headSamples;
+    int numSamples = firstData.length - headSamples;
+    int durationMs = (int)((1 - scale) * (first.getEndMillis() - first.getStartMillis()));
+
+    return input.buffer(2, 1)
+      .filter(fs -> fs.size() == 2)
+      .map(fs -> {
+        Iterator<SamplePacket> it = fs.iterator();
+        SamplePacket head = it.next();
+        SamplePacket heart = it.next();
+
+        float[] data = new float[numSamples];
+        float[] headData = head.getData();
+        float[] heartData = heart.getData();
+        int i = 0;
+        int j = headSamples;
+        while (i < headSamples) {
+          data[i] = heartData[i] + headData[j];
+          ++i;
+          ++j;
+        }
+        // last sample garbage...
+        if (heartSamples > 0) {
+          System.arraycopy(heartData, headSamples, data, headSamples, heartSamples);
+        }
+
+        int start = heart.getStartMillis();
+        return new SamplePacket(
+          start,
+          start + durationMs,
+          data,
+          heart.getSampleRate());
+      });
+  }
+
+  /**
+   * Create a new stream of overlapping samples.
+   */
+  public static Flowable<SamplePacket> windowOverlap(Flowable<SamplePacket> input, double scale) {
+    assert (scale >= 0);
+    assert (scale <= 1);
+    final LinkedList<SamplePacket> buffer = new LinkedList<>();
+    SamplePacket first = input.blockingFirst();
+    final int delta = first.getEndMillis() - first.getStartMillis() + 1;
+    final int n = first.getData().length;
+    final int overflowOffset = (int)(scale * n); // XXX need to be exact? we can miss a sample
+    final int resultSamples = n + 2 * overflowOffset;
+    final int offsetTime = (int)(scale * delta);
+
+    return input.buffer(3, 1)
+      .filter(fs -> fs.size() == 3)
+      .map(fs -> {
+        Iterator<SamplePacket> it = fs.iterator();
+        SamplePacket head = it.next();
+        SamplePacket heart = it.next();
+        SamplePacket tail = it.next();
+
+        float[] headData = head.getData();
+        float[] heartData = heart.getData();
+        float[] tailData = tail.getData();
+
+        float[] data = new float[resultSamples];
+        System.arraycopy(headData, n - overflowOffset, data, 0, overflowOffset);
+        System.arraycopy(heartData, 0, data, overflowOffset, n);
+        System.arraycopy(tailData, 0, data, n + overflowOffset, overflowOffset);
+
+        return new SamplePacket(
+          heart.getStartMillis() - offsetTime,
+          heart.getEndMillis() + offsetTime,
+          data,
+          heart.sampleRate);
+      });
   }
 }

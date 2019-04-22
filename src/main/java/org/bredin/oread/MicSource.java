@@ -22,10 +22,15 @@ public class MicSource {
     final TargetDataLine line = (TargetDataLine)AudioSystem.getLine(info);
     line.open(LpcmPacket.AUDIO_FORMAT);
     line.start();
+
+    // Some algorithms need sample input, which triggers doFinally()
+    /*
     return time.doFinally(() -> {
       log.info("Closing mic {}", info);
       line.close();
-    }).map(t -> {
+    })
+     */
+    return time.map(t -> {
       final int start = t.getStartMillis();
       final int end = t.getEndMillis();
       final int byteTime = (int)((end - start)

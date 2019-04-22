@@ -10,6 +10,8 @@ import org.apache.logging.log4j.Logger;
 import org.bredin.oread.panels.SpectrometerPanel;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
 import static org.bredin.oread.Signals.*;
@@ -231,4 +233,70 @@ public class SignalsTest {
 		float[] expected = {0.0f, 1.0f};
 		assertArrayEquals(expected, resample(input, 2), EPS);
 	}
+
+	@Test
+  public void windowDeoverlapTest() {
+	  int rate = 2000;
+	  float[] fs = { 1, 2, 3, 4};
+	  SamplePacket[] inputs = {
+	    new SamplePacket(1, 2, fs, rate),
+      new SamplePacket(2, 3, fs, rate),
+      new SamplePacket(3, 4, fs, rate),
+      new SamplePacket(4, 5, fs, rate),
+      new SamplePacket(5, 6, fs, rate),
+    };
+    Flowable<SamplePacket> input = Flowable.fromArray(inputs);
+    Flowable<SamplePacket> output =
+      Signals.windowDeoverlap(Signals.windowOverlap(input, 0.5), 0.5);
+ 	  LinkedList<SamplePacket> samples = new LinkedList<>();
+	  for (SamplePacket p : output.blockingIterable()) {
+	    samples.add(p);
+    }
+
+    assertEquals(2, samples.size());
+	  assertEquals(
+      "[2, 3]",
+      Arrays.toString(samples.stream().map(SamplePacket::getStartMillis).toArray()));
+	  assertEquals(
+	    "[3, 4]",
+      Arrays.toString(samples.stream().map(SamplePacket::getEndMillis).toArray()));
+    assertEquals(
+      "[4, 4]",
+      Arrays.toString(samples.stream().map(p -> p.getData().length).toArray()));
+    assertEquals(
+      "[6.0, 8.0, 2.0, 4.0]",
+      Arrays.toString(samples.get(0).getData()));
+  }
+
+	@Test
+  public void windowOverlapTest() {
+	  int rate = 2000;
+	  float[] fs = { 1, 2, 3, 4};
+	  SamplePacket[] inputs = {
+	    new SamplePacket(1, 2, fs, rate),
+      new SamplePacket(2, 3, fs, rate),
+      new SamplePacket(3, 4, fs, rate),
+      new SamplePacket(4, 5, fs, rate),
+    };
+	  Flowable<SamplePacket> input = Flowable.fromArray(inputs);
+	  Flowable<SamplePacket> output = Signals.windowOverlap(input, 0.5);
+	  LinkedList<SamplePacket> samples = new LinkedList<>();
+	  for (SamplePacket p : output.blockingIterable()) {
+	    samples.add(p);
+    }
+
+	  assertEquals(2, samples.size());
+    assertEquals(
+      "[1, 2]",
+      Arrays.toString(samples.stream().map(SamplePacket::getStartMillis).toArray()));
+	  assertEquals(
+	    "[4, 5]",
+      Arrays.toString(samples.stream().map(SamplePacket::getEndMillis).toArray()));
+    assertEquals(
+      "[8, 8]",
+      Arrays.toString(samples.stream().map(p -> p.getData().length).toArray()));
+    assertEquals(
+      "[3.0, 4.0, 1.0, 2.0, 3.0, 4.0, 1.0, 2.0]",
+      Arrays.toString(samples.get(0).getData()));
+  }
 }
